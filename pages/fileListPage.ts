@@ -1,7 +1,8 @@
 import { Page, expect } from '@playwright/test';
 import { fileListLocators } from '../objectRepository/fileListLocators';
+import testData from '../test-data/t1_run_algorithm_histo.json';
 
-const fileName: string = process.env.File_Name || "";
+const fileName: string = testData.file_name || "";
 
 export class FileListPage {
     constructor(private page: Page) { }

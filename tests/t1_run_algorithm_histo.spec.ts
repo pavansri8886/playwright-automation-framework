@@ -4,6 +4,7 @@ import { AlgorithmSidePanel } from '../pages/algorithmPanel';
 import { SlideViewerPage } from '../pages/slideViewerPage';
 import { LoginPage } from '../pages/loginPage';
 
+
 test.describe("User Authentication Block", () => {
 
     test("User login to the application with valid credentials", async ({ page }) => {
