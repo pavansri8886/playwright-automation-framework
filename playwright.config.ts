@@ -50,7 +50,7 @@ export default defineConfig({
         deviceScaleFactor: undefined,
       },
       testMatch: [
-        '**/01_auth.spec.ts',
+        '**/t1_run_algorithm_histo.spec.ts',
         // '**/02_fileList.spec.ts',
         // '**/03_algorithm.spec.ts',
       ],
