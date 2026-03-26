@@ -36,10 +36,13 @@ export class FileListPage {
 
     //Select file and open it
     async selectFile(fileName: string) {
-        const filecount = await this.page.getByRole(fileListLocators.fileRow.role).count();
-        console.log(filecount);
-        await this.page.getByRole('cell', { name: new RegExp(fileName, 'i') }).click();
-        await this.page.getByText(fileListLocators.openFile.text).click();
+        const row = this.page.getByRole('cell', {
+            name: new RegExp(fileName, 'i')
+        });
+        await row.hover();
+        await row.click();
+        await this.page.getByText(fileListLocators.openFile.text)
+            .click({ force: true });
     }
 
     async openFile() {
