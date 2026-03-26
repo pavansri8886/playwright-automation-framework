@@ -23,7 +23,7 @@ export default defineConfig({
     video: 'retain-on-failure',
     actionTimeout: 15000,
     navigationTimeout: 30000,
-    viewport: null,
+    // viewport: null,
     launchOptions: {
       args: ['--start-maximized'],
     },

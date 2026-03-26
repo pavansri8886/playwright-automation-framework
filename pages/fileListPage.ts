@@ -30,8 +30,11 @@ export class FileListPage {
 
     //method to open my files from quick access
     async navigateToMyFiles() {
+        await this.page.waitForLoadState('networkidle');
         await this.page.getByTestId(fileListLocators.clickMyFilesQuickAccess.testId).isVisible();
         await this.page.getByTestId(fileListLocators.clickMyFilesQuickAccess.testId).click();
+        await this.page.waitForLoadState('networkidle');
+        await this.page.waitForTimeout(2000);
     }
 
     //Select file and open it
