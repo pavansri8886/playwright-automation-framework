@@ -7,19 +7,34 @@ export class ReportGenPage {
 
     //this will take you from my files to report generation page by selecting type of report
     async createReport() {
-        const createButton = await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).isVisible();
-        if (createButton==true){
-            await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).click();
-        }else{
-            await this.page.getByText('more').click();
-            await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).click();
+        // const createButton = await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).isVisible();
+        // if (createButton==true){
+        //     await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).click();
+        // }else{
+        //     await this.page.getByText('more').click();
+        //     await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).click();
+        // }
+        // expand sidebar if collapsed
+        const createBtn = this.page.getByRole(
+            reportGenLocators.createBTN.role,
+            { name: reportGenLocators.createBTN.name }
+        );
+
+        const isCreateVisible = await createBtn.isVisible();
+
+        if (!isCreateVisible) {
+            // click hamburger to expand sidebar
+            await this.page.locator('button[class*="hamburger"], [aria-label="hamburger"], .anticon-menu').first().click();
+            await this.page.waitForTimeout(500);
         }
+
+        await createBtn.click();
         await this.page.getByRole(reportGenLocators.documentBTN.role, { name: reportGenLocators.documentBTN.name }).click();
         await this.page.getByRole(reportGenLocators.templateSearchBar.role, { name: reportGenLocators.templateSearchBar.name }).click();
         await this.page.getByRole('option', { name: testData.typeOfReport, exact: true }).click();
         await this.page.getByRole(reportGenLocators.okBTN.role, { name: reportGenLocators.okBTN.name }).click();
     }
-    
+
     //ICCR - Invasive Carcinoma - To capture details of given page
     async captureDetails() {
         await this.page.getByRole('textbox').first().fill(testData.GivenName);
