@@ -39,10 +39,7 @@ export class FileListPage {
         const row = this.page.getByRole('cell', {
             name: new RegExp(fileName, 'i')
         });
-        await row.hover();
-        await row.click();
-        await this.page.getByText(fileListLocators.openFile.text)
-            .click({ force: true });
+        await row.dblclick();
     }
 
     async openFile() {
