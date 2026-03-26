@@ -4,44 +4,50 @@ import { algorithmLocators } from '../objectRepository/algorithmLocators'
 export class AlgorithmSidePanel {
     constructor(private page: Page) { }
 
-    async ensureAlgorithmPanelExpanded() {
-        const isBannerVisible = await this.page.getByText(algorithmLocators.researchOnlyBanner.text).isVisible();
-        if (!isBannerVisible == true) {
-            await this.page.getByRole(algorithmLocators.algorithmPanelExpand.role, {
-                name: algorithmLocators.algorithmPanelExpand.name
-            }).click();
+    //to check if panel is expanded or not and expand if closed
+    async ensurePanelExpanded() {
+        const panel = this.page.locator('.ant-collapse-header')
+            .filter({ hasText: 'Algorithms' });
+        const isExpanded = await panel.getAttribute('aria-expanded');
+        if (isExpanded === 'false') {
+            await panel.click();
+            await this.page.waitForTimeout(500);
         }
     }
 
+    //
     async verifyAlgorithmSelected() {
-        const isAlgorithmNameSelected = await this.page.getByText(algorithmLocators.algorithmName.text).isVisible();
-        const isAlgorithmReady = await this.page.getByText(algorithmLocators.algorithmReady.text).isVisible();
-        if (!isAlgorithmNameSelected && !isAlgorithmReady) {
+        const isAlgorithmReady = await this.page.getByText('Ready').isVisible();
+        if (!isAlgorithmReady) {
             await this.selectAlgorithm();
+        } else {
+            console.log("Algorithm already ready — skipping");
         }
     }
 
     async selectAlgorithm() {
-        await this.page.getByRole(algorithmLocators.runAlgorithmButton.role,
-            { name: algorithmLocators.runAlgorithmButton.name }).click();
-        await this.page.getByRole(algorithmLocators.selectAlgorithmDropDown.role,
-            { name: algorithmLocators.selectAlgorithmDropDown.name }).click();
-
-        await this.page.getByText(algorithmLocators.algorithmOptions.text).click();
+        // click run algorithm button
         await this.page.getByRole(
-            algorithmLocators.scanSelectionDropDown.role
-        ).nth(algorithmLocators.scanSelectionDropDown.index).click();
-        await this.page.getByText(
-            algorithmLocators.selectWholeScan.text
-        ).nth(algorithmLocators.selectWholeScan.index).click();
-        await this.page.getByRole(algorithmLocators.nextButton.role, { name: algorithmLocators.nextButton.name }).click();
+            algorithmLocators.runAlgorithmButton.role,
+            { name: algorithmLocators.runAlgorithmButton.name }
+        ).click();
+
+        // click algorithm dropdown
+            await this.page.getByRole('combobox', { name: '* Select algorithm' }).click();
+
+        // select Gleason Score from dropdown options
+        await this.page.getByTitle('Gleason Score').click();
+
+        // whole scan is default — just click Next directly
+        await this.page.getByRole(
+            algorithmLocators.nextButton.role,
+            { name: algorithmLocators.nextButton.name }
+        ).click();
     }
 
     async runAlgorithm() {
-        await this.ensureAlgorithmPanelExpanded();
+        await this.ensurePanelExpanded();
         await this.verifyAlgorithmSelected();
-        // await this.page.getByRole(algorithmLocators.runAlgorithmButton.role,
-        //     { name: algorithmLocators.runAlgorithmButton.name }).click();
     }
 
 

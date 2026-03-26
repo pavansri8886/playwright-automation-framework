@@ -5,9 +5,9 @@ import { SlideViewerPage } from '../pages/slideViewerPage';
 import { LoginPage } from '../pages/loginPage';
 
 
-test.describe("User Authentication Block", () => {
+test.describe("user authentication, search, dashboard page and running algorithm", () => {
 
-    test("User login to the application with valid credentials", async ({ page }) => {
+    test("To login to the application, navigate to algorithm page and run algorithm", async ({ page }) => {
 
         const loginPage = new LoginPage(page);
         const fileListPage = new FileListPage(page);

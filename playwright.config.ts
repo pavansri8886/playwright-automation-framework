@@ -51,8 +51,7 @@ export default defineConfig({
       },
       testMatch: [
         '**/t1_run_algorithm_histo.spec.ts',
-        // '**/02_fileList.spec.ts',
-        // '**/03_algorithm.spec.ts',
+        '**/t2_generate_iccr_document.spec.ts',
       ],
     },
 

@@ -10,7 +10,7 @@ export const algorithmLocators = {
     runAlgorithmButton: { role: 'button' as const, name: 'Run algorithm' },
     selectAlgorithmDropDown: { role: 'combobox' as const, name: '* Select algorithm' },
     algorithmOptions: { text: 'Gleason Score' },
-    scanSelectionDropDown: { role: 'combobox' as const, index: 3 },
-    selectWholeScan: { text: 'whole scan', index: 1 },
+    scanSelectionDropDown: { role: 'combobox' as const, index: 1 },
+    selectWholeScan: { text: 'whole scan' },
     nextButton: { role: 'button' as const, name: 'Next' },
 };

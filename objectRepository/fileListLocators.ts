@@ -15,10 +15,4 @@ export const fileListLocators = {
     //To open file
     openFile: { text: 'open' },
 
-    //To upload file from myfiles
-    uploadFile: { text: 'upload files' },
-    selectFile: { role: 'button', name: 'cloud-upload Select files' }
-
-
-
 };
