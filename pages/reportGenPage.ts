@@ -7,7 +7,8 @@ export class ReportGenPage {
 
     //this will take you from my files to report generation page by selecting type of report
     async createReport() {
-        await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).click();
+        await this.page.getByText('create', { exact: true }).click();
+        // await this.page.getByRole(reportGenLocators.createBTN.role, { name: reportGenLocators.createBTN.name }).click();
         await this.page.getByRole(reportGenLocators.documentBTN.role, { name: reportGenLocators.documentBTN.name }).click();
         await this.page.getByRole(reportGenLocators.templateSearchBar.role, { name: reportGenLocators.templateSearchBar.name }).click();
         await this.page.getByRole('option', { name: testData.typeOfReport, exact: true }).click();
