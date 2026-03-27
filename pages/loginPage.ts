@@ -11,7 +11,7 @@ export class LoginPage {
         this.page = page;
     }
 
-    // "Page" - and "page" -
+    // "Page" - type of ts and "page" - creating/declaring a property
     // constructor(private page: Page){} // we can also mention like this instead of above
 
     //Implicit wait for Selenium

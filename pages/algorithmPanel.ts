@@ -15,13 +15,23 @@ export class AlgorithmSidePanel {
         }
     }
 
-    //
+    //to check if algo is selected
     async verifyAlgorithmSelected() {
+        await this.page.waitForTimeout(700);
         const isAlgorithmReady = await this.page.getByText('Ready').isVisible();
-        if (!isAlgorithmReady) {
+        const isAlgorithmProcessing = await this.page.getByText('Processing').isVisible();
+        if (isAlgorithmReady) {
+            await this.page.waitForTimeout(700);
+            await this.page.screenshot({ path: 'test-results/my-screenshot.png' });
+            console.log("Algorithm is Ready button")
+        } else if (isAlgorithmProcessing) {
+            await this.page.waitForTimeout(700);
+            await this.page.screenshot({ path: 'test-results/my-screenshot.png' });
+            console.log("Algorithm is Processing")
+        }
+        else {
             await this.selectAlgorithm();
-        } else {
-            console.log("Algorithm already ready — skipping");
+            console.log("Algorithm already ready or processing — skipping");
         }
     }
 
@@ -33,16 +43,24 @@ export class AlgorithmSidePanel {
         ).click();
 
         // click algorithm dropdown
-            await this.page.getByRole('combobox', { name: '* Select algorithm' }).click();
+        await this.page.getByRole('combobox', { name: '* Select algorithm' }).click();
 
-        // select Gleason Score from dropdown options
+        // Gleason Score dropdown
         await this.page.getByTitle('Gleason Score').click();
 
-        // whole scan is default — just click Next directly
+        // whole scan option
         await this.page.getByRole(
             algorithmLocators.nextButton.role,
             { name: algorithmLocators.nextButton.name }
         ).click();
+        await this.page.waitForTimeout(700);
+        await this.page.getByText('Processing').waitFor({ state: 'visible' }); // wait untill visible equivalent
+        await this.page.screenshot({ path: 'test-results/my-screenshot.png' });
+        // await this.page.screenshot({
+        //     path: 'test-results/my-screenshot.png',
+        //     fullPage: true  // captures entire scrollable page
+        // });
+        console.log("Algorithm selected successfully")
     }
 
     async runAlgorithm() {
