@@ -10,7 +10,7 @@ export const fileListLocators = {
 
     //to get the list of files in the table , we can use before and after searching for file
     fileRow: { role: 'cell' as const },
-    fileName: { role: 'cell' as const, name: process.env.File_Name },
+    fileName: { role: 'cell' as const, name: process.env['File_Name'] },
 
     //To open file
     openFile: { text: 'open' },

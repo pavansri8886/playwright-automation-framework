@@ -13,6 +13,7 @@ test.describe("Generate ICCR report", () => {
         await fileListPage.navigateToMyFiles();
         await reportGen.createReport();
         await reportGen.captureDetails();
+        // await reportGen.radiobuttons();
     });
 
 });
