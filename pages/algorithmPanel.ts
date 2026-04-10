@@ -21,11 +21,11 @@ export class AlgorithmSidePanel {
         const isAlgorithmReady = await this.page.getByText('Ready').isVisible();
         const isAlgorithmProcessing = await this.page.getByText('Processing').isVisible();
         if (isAlgorithmReady) {
-            await this.page.waitForTimeout(700);
+            await this.page.waitForTimeout(2000);
             await this.page.screenshot({ path: 'test-results/my-screenshot.png' });
-            console.log("Algorithm is Ready button")
+            console.log("Algorithm is Ready")
         } else if (isAlgorithmProcessing) {
-            await this.page.waitForTimeout(700);
+            await this.page.waitForTimeout(2000);
             await this.page.screenshot({ path: 'test-results/my-screenshot.png' });
             console.log("Algorithm is Processing")
         }
@@ -53,13 +53,14 @@ export class AlgorithmSidePanel {
             algorithmLocators.nextButton.role,
             { name: algorithmLocators.nextButton.name }
         ).click();
-        await this.page.waitForTimeout(700);
+        await this.page.waitForTimeout(1000);
         await this.page.getByText('Processing').waitFor({ state: 'visible' }); // wait untill visible equivalent
         await this.page.screenshot({ path: 'test-results/my-screenshot.png' });
         // await this.page.screenshot({
         //     path: 'test-results/my-screenshot.png',
         //     fullPage: true  // captures entire scrollable page
         // });
+        await this.page.waitForTimeout(2000);
         console.log("Algorithm selected successfully")
     }
 
