@@ -46,7 +46,7 @@ export class AlgorithmSidePanel {
         await this.page.getByRole('combobox', { name: '* Select algorithm' }).click();
 
         // Gleason Score dropdown
-        await this.page.getByTitle('Gleason Score').click();
+        await this.page.getByTitle('Gleason Score 6.0').click();
 
         // whole scan option
         await this.page.getByRole(
