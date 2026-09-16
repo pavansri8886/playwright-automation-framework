@@ -21,7 +21,7 @@ export class ReportGenPage {
 
         } else if (await createMenuBtn.isVisible()) {
             // case 2 — medium screen
-            await createMenuBtn.click();
+            await createMenuBtn.hover();
             await this.page.getByText('document').click();
 
         } else {

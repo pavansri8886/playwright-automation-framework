@@ -4,7 +4,6 @@ import { AlgorithmSidePanel } from '../pages/algorithmPanel';
 import { SlideViewerPage } from '../pages/slideViewerPage';
 import { LoginPage } from '../pages/loginPage';
 
-
 test.describe("user authentication, search, dashboard page and running algorithm", () => {
 
     test("To login to the application, navigate to algorithm page and run algorithm", async ({ page }) => {
