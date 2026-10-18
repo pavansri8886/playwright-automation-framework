@@ -1,0 +1,24 @@
+# .azure-pipelines/test-cv-currency-converter.yml
+# Currency Converter Regression suite. Trigger: MANUAL ONLY. Pick the environment when starting the run.
+
+name: CurrencyConverter_Regression_$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+parameters:
+  - name: environments
+    displayName: 'Environment'
+    type: string
+    default: TEST
+    values: [TEST, UAT, Both]
+
+jobs:
+  - template: templates/playwright-suite.yml
+    parameters:
+      project: currency-converter
+      displayName: CurrencyConverter
+      suite: Regression
+      specFile: tests-currency-converter-regression.spec.ts
+      environments: ${{ parameters.environments }}
+      variableGroup: CurrencyConverter-Variables

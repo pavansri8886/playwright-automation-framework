@@ -1,0 +1,168 @@
+# .azure-pipelines/templates/playwright-suite.yml
+# Shared steps for every test suite pipeline. NOT a pipeline itself, never registered in Azure DevOps.
+# Runs exactly what we run locally:
+#   PROJECT=<project> ENV=<TEST|UAT> npx playwright test <spec file> --project=<project>
+#
+# Agents: Managed DevOps Pools inside the company network, a fresh VM for every job.
+#   TEST jobs -> cv-t-qa-pool      UAT jobs -> cv-a-qa-pool
+#
+# Variable group per project (e.g. Skychat-Variables) must contain:
+#   TEST_BASE_URL, UAT_BASE_URL (when known)  -> visible, NOT locked
+#   TEST_USERNAME, TEST_PASSWORD              -> locked (secret)
+
+parameters:
+  - name: project          # Playwright --project name, folder prj-<project>
+    type: string
+  - name: displayName      # readable name for run titles, e.g. SkyChat
+    type: string
+  - name: suite            # suite name for run titles, e.g. Regression, ClearFeed
+    type: string
+  - name: specFile         # spec file to run, e.g. tests-skychat-regression.spec.ts
+    type: string
+  - name: environments     # TEST, UAT or Both
+    type: string
+    default: TEST
+  - name: variableGroup    # e.g. Skychat-Variables
+    type: string
+  - name: testPool         # agent pool for TEST jobs
+    type: string
+    default: cv-t-qa-pool
+  - name: uatPool          # agent pool for UAT jobs
+    type: string
+    default: cv-a-qa-pool
+  - name: allEnvironments  # internal list, do not change
+    type: object
+    default: [TEST, UAT]
+
+jobs:
+  - ${{ each env in parameters.allEnvironments }}:
+    - ${{ if or(eq(parameters.environments, env), eq(parameters.environments, 'Both')) }}:
+      - job: ${{ replace(parameters.project, '-', '_') }}_${{ parameters.suite }}_${{ env }}
+        displayName: '${{ parameters.displayName }} | ${{ parameters.suite }} | ${{ env }}'
+        timeoutInMinutes: 60
+
+        # TEST runs on the Test pool, UAT on the UAT pool: each pool can reach its own environment.
+        pool:
+          ${{ if eq(env, 'UAT') }}:
+            name: ${{ parameters.uatPool }}
+          ${{ else }}:
+            name: ${{ parameters.testPool }}
+
+        variables:
+          - group: ${{ parameters.variableGroup }}
+
+        steps:
+          - checkout: self
+            fetchDepth: 1
+            clean: true            # never publish an old results.xml from a previous run
+
+          # Prints what the agent has, so the first run tells us if anything is missing.
+          # Never fails the run. Windows PowerShell on purpose: it exists on every Windows agent.
+          - powershell: |
+              function Show($name, $value) { Write-Host ("{0,-16} {1}" -f $name, $value) }
+              Show 'Agent' "$env:AGENT_NAME ($env:AGENT_OS)"
+              foreach ($tool in 'node', 'npm') {
+                if (Get-Command $tool -ErrorAction SilentlyContinue) { Show $tool (& $tool --version 2>&1 | Select-Object -First 1) }
+                else { Show $tool 'NOT INSTALLED' }
+              }
+              if ($IsLinux) { $edge = (Get-Command microsoft-edge -ErrorAction SilentlyContinue).Source }
+              else {
+                $edge = @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+                          "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe") |
+                        Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+              }
+              if ($edge) { Show 'Microsoft Edge' "found   ($edge)" }
+              else { Show 'Microsoft Edge' 'NOT FOUND (playwright.config.ts needs channel msedge)' }
+            displayName: 'Show agent tools'
+            continueOnError: true
+
+          # Pins Node 20 (UseNode@1 is the task the dev pipelines use). If the agent has no internet
+          # access this download fails; continueOnError lets the run go on with the Node already on the agent.
+          - task: UseNode@1
+            displayName: 'Use Node.js 20'
+            continueOnError: true
+            inputs:
+              version: '20.x'
+
+          # Stops with a plain message if there is no Node at all (not on the image, not downloadable).
+          - powershell: |
+              if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+                Write-Host "##vso[task.logissue type=error]Node.js is not installed on this agent and could not be downloaded. Ask the Cloud Team to add Node.js 20 to the image of the agent pool."
+                exit 1
+              }
+              $version = node --version
+              Write-Host "Node.js $version is available"
+            displayName: 'Check Node.js'
+
+          - script: npm ci
+            displayName: 'Install dependencies'
+
+          # playwright.config.ts uses channel 'msedge', so Microsoft Edge must be on the agent.
+          # If it is missing, try to install it; if that is not possible, stop with a plain message.
+          - powershell: |
+              function Find-Edge {
+                if ($IsLinux) { return (Get-Command microsoft-edge -ErrorAction SilentlyContinue).Source }
+                @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+                  "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe") |
+                  Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+              }
+              $edge = Find-Edge
+              if (-not $edge) {
+                Write-Host "Microsoft Edge not found, trying: npx playwright install msedge"
+                npx playwright install msedge
+                $edge = Find-Edge
+              }
+              if (-not $edge) {
+                Write-Host "##vso[task.logissue type=error]Microsoft Edge is not installed on this agent and could not be installed. Ask the Cloud Team to add Microsoft Edge to the image of the agent pool."
+                exit 1
+              }
+              Write-Host "Microsoft Edge found: $edge"
+            displayName: 'Check Microsoft Edge'
+
+          # Stop early with a clear message if a URL or the login is missing,
+          # instead of failing later inside the tests with "invalid URL".
+          - powershell: |
+              $env_name = '${{ env }}'
+              $url = if ($env_name -eq 'UAT') { $env:UAT_BASE_URL } else { $env:TEST_BASE_URL }
+              $url_name = "${env_name}_BASE_URL"
+              $missing = @()
+              if ([string]::IsNullOrWhiteSpace($url)) { $missing += $url_name }
+              foreach ($pair in @(@('TEST_USERNAME', $env:CHECK_USERNAME), @('TEST_PASSWORD', $env:CHECK_PASSWORD))) {
+                if ([string]::IsNullOrWhiteSpace($pair[1]) -or $pair[1].StartsWith('$(')) { $missing += $pair[0] }
+              }
+              if ($missing.Count -gt 0) {
+                Write-Host "##vso[task.logissue type=error]Missing in variable group '${{ parameters.variableGroup }}': $($missing -join ', ')"
+                exit 1
+              }
+              Write-Host "Running ${{ parameters.displayName }} ${{ parameters.suite }} on $env_name ($url)"
+            displayName: 'Check environment settings'
+            env:
+              CHECK_USERNAME: $(TEST_USERNAME)
+              CHECK_PASSWORD: $(TEST_PASSWORD)
+
+          - script: npx playwright test ${{ parameters.specFile }} --project=${{ parameters.project }}
+            displayName: 'Run ${{ parameters.displayName }} ${{ parameters.suite }} on ${{ env }}'
+            env:
+              CI: 'true'
+              PROJECT: ${{ parameters.project }}
+              ENV: ${{ env }}
+              # Secret variables are not passed to scripts automatically: map them here.
+              TEST_USERNAME: $(TEST_USERNAME)
+              TEST_PASSWORD: $(TEST_PASSWORD)
+
+          # Run title convention: Framework | Project | Suite | Environment  (used by dashboards / Power BI)
+          - task: PublishTestResults@2
+            displayName: 'Publish test results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'reports/${{ parameters.project }}/results.xml'
+              testRunTitle: 'WebUI | ${{ parameters.displayName }} | ${{ parameters.suite }} | ${{ env }}'
+              failTaskOnFailedTests: false
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish HTML report'
+            condition: always()
+            inputs:
+              targetPath: 'reports/${{ parameters.project }}/html-report'
+              artifact: 'report-${{ parameters.project }}-${{ lower(parameters.suite) }}-${{ lower(env) }}-$(System.JobAttempt)'
