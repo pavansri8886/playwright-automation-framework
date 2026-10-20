@@ -1,0 +1,23 @@
+# SkyChat Regression (manual)
+
+name: SkyChat_Regression_$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+parameters:
+  - name: environments
+    displayName: 'Environment'
+    type: string
+    default: TEST
+    values: [TEST, UAT, Both]
+
+jobs:
+  - template: templates/playwright-suite.yml
+    parameters:
+      project: skychat
+      displayName: SkyChat
+      suite: Regression
+      specFile: tests-skychat-regression.spec.ts
+      environments: ${{ parameters.environments }}
+      variableGroup: Skychat-Variables

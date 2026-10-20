@@ -1,0 +1,138 @@
+# Shared template for the Playwright test pipelines.
+
+parameters:
+  - name: project
+    type: string
+  - name: displayName
+    type: string
+  - name: suite
+    type: string
+  - name: specFile
+    type: string
+  - name: environments
+    type: string
+    default: TEST
+  - name: variableGroup
+    type: string
+  - name: credentialsGroup
+    type: string
+    default: QA-Common-Credentials
+  - name: testPool
+    type: string
+    default: cv-t-qa-pool
+  - name: uatPool
+    type: string
+    default: cv-a-qa-pool
+  - name: allEnvironments
+    type: object
+    default: [TEST, UAT]
+
+jobs:
+  - ${{ each env in parameters.allEnvironments }}:
+    - ${{ if or(eq(parameters.environments, env), eq(parameters.environments, 'Both')) }}:
+      - job: ${{ replace(parameters.project, '-', '_') }}_${{ parameters.suite }}_${{ env }}
+        displayName: '${{ parameters.displayName }} | ${{ parameters.suite }} | ${{ env }}'
+        timeoutInMinutes: 60
+
+        pool:
+          ${{ if eq(env, 'UAT') }}:
+            name: ${{ parameters.uatPool }}
+          ${{ else }}:
+            name: ${{ parameters.testPool }}
+
+        variables:
+          - group: ${{ parameters.credentialsGroup }}
+          - group: ${{ parameters.variableGroup }}
+
+        steps:
+          - checkout: self
+            fetchDepth: 1
+            clean: true
+
+          - task: UseNode@1
+            displayName: 'Use Node.js 20'
+            continueOnError: true
+            inputs:
+              version: '20.x'
+
+          - powershell: |
+              if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+                Write-Host "##vso[task.logissue type=error]Node.js is not available on this agent."
+                exit 1
+              }
+              $nodeVersion = node --version
+              $npmVersion = npm --version
+              Write-Host "Agent: $env:AGENT_NAME ($env:AGENT_OS)"
+              Write-Host "Node.js $nodeVersion, npm $npmVersion"
+            displayName: 'Check Node.js'
+
+          - script: npm ci
+            displayName: 'Install dependencies'
+
+          - powershell: |
+              function Find-Edge {
+                if ($IsLinux) { return (Get-Command microsoft-edge -ErrorAction SilentlyContinue).Source }
+                @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+                  "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe") |
+                  Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+              }
+              $edge = Find-Edge
+              if (-not $edge) {
+                Write-Host "Edge not found, installing it"
+                npx playwright install msedge
+                $edge = Find-Edge
+              }
+              if (-not $edge) {
+                Write-Host "##vso[task.logissue type=error]Microsoft Edge is not available on this agent."
+                exit 1
+              }
+              Write-Host "Microsoft Edge: $edge"
+            displayName: 'Check Microsoft Edge'
+
+          - powershell: |
+              $envName = '${{ env }}'
+              $url = if ($envName -eq 'UAT') { $env:UAT_BASE_URL } else { $env:TEST_BASE_URL }
+              $failed = $false
+              if ([string]::IsNullOrWhiteSpace($url)) {
+                Write-Host "##vso[task.logissue type=error]Missing in variable group '${{ parameters.variableGroup }}': ${envName}_BASE_URL"
+                $failed = $true
+              }
+              $missing = @()
+              foreach ($pair in @(@('TEST_USERNAME', $env:CHECK_USERNAME), @('TEST_PASSWORD', $env:CHECK_PASSWORD))) {
+                if ([string]::IsNullOrWhiteSpace($pair[1]) -or $pair[1].StartsWith('$(')) { $missing += $pair[0] }
+              }
+              if ($missing.Count -gt 0) {
+                Write-Host "##vso[task.logissue type=error]Missing in variable group '${{ parameters.credentialsGroup }}': $($missing -join ', ')"
+                $failed = $true
+              }
+              if ($failed) { exit 1 }
+              Write-Host "Running ${{ parameters.displayName }} ${{ parameters.suite }} on $envName ($url)"
+            displayName: 'Check environment settings'
+            env:
+              CHECK_USERNAME: $(TEST_USERNAME)
+              CHECK_PASSWORD: $(TEST_PASSWORD)
+
+          - script: npx playwright test ${{ parameters.specFile }} --project=${{ parameters.project }}
+            displayName: 'Run ${{ parameters.displayName }} ${{ parameters.suite }} on ${{ env }}'
+            env:
+              CI: 'true'
+              PROJECT: ${{ parameters.project }}
+              ENV: ${{ env }}
+              TEST_USERNAME: $(TEST_USERNAME)
+              TEST_PASSWORD: $(TEST_PASSWORD)
+
+          - task: PublishTestResults@2
+            displayName: 'Publish test results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'reports/${{ parameters.project }}/results.xml'
+              testRunTitle: 'WebUI | ${{ parameters.displayName }} | ${{ parameters.suite }} | ${{ env }}'
+              failTaskOnFailedTests: false
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish HTML report'
+            condition: always()
+            inputs:
+              targetPath: 'reports/${{ parameters.project }}/html-report'
+              artifact: 'report-${{ parameters.project }}-${{ lower(parameters.suite) }}-${{ lower(env) }}-$(System.JobAttempt)'
